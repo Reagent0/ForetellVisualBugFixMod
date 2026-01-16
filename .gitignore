@@ -1,0 +1,7 @@
+*
+!.gitignore
+!CMakeLists.txt
+!README.md
+!BUG_INFO.md
+!src/
+!src/**
