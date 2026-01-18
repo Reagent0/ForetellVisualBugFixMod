@@ -53,10 +53,15 @@ public:
 
 private:
     std::pair<int, int> initial_hook_ids;
+    struct HookedFuncs
+    {
+        RC::Unreal::UFunction *fn_OnBattleDependenciesFullyLoaded;
+        RC::Unreal::UFunction *fn_ApplyForetell;
+    } hooked_funcs;
     bool hooked;
     void init_hooks();
 };
 
-void hook_ApplyForetell(RC::Unreal::UnrealScriptFunctionCallableContext &context, void *custom_data);
+void hook_ApplyForetell(RC::Unreal::UObject *context, RC::Unreal::FFrame &stack, void *RESULT_DECL);
 
 } // Namespace

@@ -1,6 +1,7 @@
 #include "ForetellVisualBugFixMod.hpp"
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/Script.hpp>
+#include <Unreal/Hooks.hpp>
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 
@@ -14,6 +15,7 @@ namespace ForetellVisualBugFixMod
 ForetellVisualBugFixMod::ForetellVisualBugFixMod()
     : RC::CppUserModBase()
     , initial_hook_ids(-1, -1)
+    , hooked_funcs{}
     , hooked(false)
 {
     ModName = STR("ForetellVisualBugFixMod");
@@ -50,43 +52,63 @@ void ForetellVisualBugFixMod::init_hooks()
 {
     FVBFMOD_LOG(LogLevel::Verbose, STR("Registering hooks.."));
 
-    UObjectGlobals::RegisterHook(Paths::Fn_OnBattleDependenciesFullyLoaded, NoOpLambda, [this](auto&&... args)
-    {
-        FVBFMOD_LOG(LogLevel::Verbose, STR("OnBattleDependenciesFullyLoaded post-hook called!"));
+    hooked_funcs.fn_OnBattleDependenciesFullyLoaded = UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, Paths::Fn_OnBattleDependenciesFullyLoaded);
+    if (hooked_funcs.fn_OnBattleDependenciesFullyLoaded == nullptr) {
+        FVBFMOD_LOG(LogLevel::Error, STR("Cannot find function OnBattleDependenciesFullyLoaded!"));
+        return;
+    }
+    FVBFMOD_LOG(LogLevel::Verbose, STR("OnBattleDependenciesFullyLoaded function found!"));
 
-        if (!hooked)
+    Unreal::Hook::RegisterProcessInternalPostCallback([this](Unreal::UObject *context, Unreal::FFrame &stack, void *RESULT_DECL)
+    {
+        if (hooked_funcs.fn_OnBattleDependenciesFullyLoaded != nullptr && hooked_funcs.fn_OnBattleDependenciesFullyLoaded == stack.Node())
         {
-            Unreal::UFunction *fn_ApplyForetell = UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, Paths::Fn_ApplyForetell);
-            if (fn_ApplyForetell)
+            FVBFMOD_LOG(LogLevel::Verbose, STR("OnBattleDependenciesFullyLoaded post-hook called!"));
+
+            if (!hooked)
             {
-                FVBFMOD_LOG(LogLevel::Verbose, STR("ApplyForetell function found! Registering hook.."));
-                UObjectGlobals::RegisterHook(fn_ApplyForetell, hook_ApplyForetell, NoOpLambda, nullptr);
+                hooked_funcs.fn_ApplyForetell = UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, Paths::Fn_ApplyForetell);
+                if (hooked_funcs.fn_ApplyForetell == nullptr)
+                {
+                    FVBFMOD_LOG(LogLevel::Error, STR("Cannot find function ApplyForetell!"));
+                    return;
+                }
                 hooked = true;
+                FVBFMOD_LOG(LogLevel::Verbose, STR("ApplyForetell function found!"));
             }
         }
-    }, nullptr);
+    });
+
+    Unreal::Hook::RegisterProcessLocalScriptFunctionPreCallback([this](Unreal::UObject *context, Unreal::FFrame &stack, void *RESULT_DECL)
+    {
+        if (hooked_funcs.fn_ApplyForetell != nullptr && hooked_funcs.fn_ApplyForetell == stack.Node())
+        {
+            hook_ApplyForetell(context, stack, RESULT_DECL);
+            return;
+        }
+    });
 }
 
-void hook_ApplyForetell(Unreal::UnrealScriptFunctionCallableContext &context, void *custom_data)
+void hook_ApplyForetell(Unreal::UObject *context, Unreal::FFrame &stack, void *RESULT_DECL)
 {
     FVBFMOD_LOG(LogLevel::Verbose, STR("ApplyForetell pre-hook called!"));
 
-    auto node = context.TheStack.Node();
+    auto node = stack.Node();
     FVBFMOD_RETIFNULL(node);
 
     auto prop_Target = node->GetPropertyByName(STR("Target"));
     FVBFMOD_RETIFNULL(prop_Target);
 
-    auto val_Target = *prop_Target->ContainerPtrToValuePtr<Unreal::UObject*>(context.TheStack.Locals());
+    auto val_Target = *prop_Target->ContainerPtrToValuePtr<Unreal::UObject*>(stack.Locals());
     FVBFMOD_RETIFNULL(val_Target);
 
-    auto val_ForetellCounts = context.Context->GetValuePtrByPropertyName<Unreal::TMap<Unreal::UObject*, Unreal::int32>>(STR("ForetellCounts"));
+    auto val_ForetellCounts = context->GetValuePtrByPropertyName<Unreal::TMap<Unreal::UObject*, Unreal::int32>>(STR("ForetellCounts"));
     FVBFMOD_RETIFNULL(val_ForetellCounts);
 
     auto target_foretell_ptr = val_ForetellCounts->Find(val_Target);
     auto target_foretell_count = target_foretell_ptr ? *target_foretell_ptr : 0;
 
-    auto fn_GetCurrentMaxForetellCount = context.Context->GetFunctionByName(STR("GetCurrentMaxForetellCount"));
+    auto fn_GetCurrentMaxForetellCount = context->GetFunctionByName(STR("GetCurrentMaxForetellCount"));
     FVBFMOD_RETIFNULL(fn_GetCurrentMaxForetellCount);
 
     struct GetCurrentMaxForetellCount_Params
@@ -94,7 +116,7 @@ void hook_ApplyForetell(Unreal::UnrealScriptFunctionCallableContext &context, vo
         Unreal::int32 ReturnValue;
     };
     auto params_GetCurrentMaxForetellCount = GetCurrentMaxForetellCount_Params{.ReturnValue = 0};
-    context.Context->ProcessEvent(fn_GetCurrentMaxForetellCount, &params_GetCurrentMaxForetellCount);
+    context->ProcessEvent(fn_GetCurrentMaxForetellCount, &params_GetCurrentMaxForetellCount);
 
     if (params_GetCurrentMaxForetellCount.ReturnValue <= 0)
     {
@@ -105,7 +127,7 @@ void hook_ApplyForetell(Unreal::UnrealScriptFunctionCallableContext &context, vo
     {
         FVBFMOD_LOG(LogLevel::Verbose, STR("Foretell cap is smaller than target's foretell, preventing ApplyForetell.."));
 
-        auto &script = context.TheStack.Node()->GetScript();
+        auto &script = node->GetScript();
         if (script.Num() < 3)
         {
             FVBFMOD_LOG(LogLevel::Error, STR("Failed to prevent original call: unexpected script size"));
@@ -118,7 +140,7 @@ void hook_ApplyForetell(Unreal::UnrealScriptFunctionCallableContext &context, vo
             FVBFMOD_LOG(LogLevel::Error, STR("Failed to prevent original call: offset doesn't point to a EX_Return instruction"));
             return;
         }
-        context.TheStack.Code() = returninst_offset;
+        stack.Code() = returninst_offset;
         return;
     }
 }
