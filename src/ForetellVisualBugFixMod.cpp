@@ -4,12 +4,12 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 
-namespace ForetellVisualBugFixMod
-{
-
 namespace Unreal = RC::Unreal;
 namespace LogLevel = RC::LogLevel;
 namespace UObjectGlobals = Unreal::UObjectGlobals;
+
+namespace ForetellVisualBugFixMod
+{
 
 ForetellVisualBugFixMod::ForetellVisualBugFixMod()
     : RC::CppUserModBase()
@@ -74,7 +74,7 @@ void hook_ApplyForetell(Unreal::UnrealScriptFunctionCallableContext &context, vo
     auto node = context.TheStack.Node();
     FVBFMOD_RETIFNULL(node);
 
-    auto prop_Target = node->GetPropertyByName(STR("Target")); // ObjectProperty
+    auto prop_Target = node->GetPropertyByName(STR("Target"));
     FVBFMOD_RETIFNULL(prop_Target);
 
     auto val_Target = *prop_Target->ContainerPtrToValuePtr<Unreal::UObject*>(context.TheStack.Locals());

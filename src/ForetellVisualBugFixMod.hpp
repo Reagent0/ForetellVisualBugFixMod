@@ -41,7 +41,6 @@ namespace Paths
 {
     inline constexpr auto *Fn_OnBattleDependenciesFullyLoaded = STR("/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_BattleManager.AC_jRPG_BattleManager_C:OnBattleDependenciesFullyLoaded");
     inline constexpr auto *Fn_ApplyForetell = STR("/Game/Gameplay/Battle/UniqueMechanics/Foretell/BP_UniqueMechanic_Foretell_Component.BP_UniqueMechanic_Foretell_Component_C:ApplyForetell");
-    inline constexpr auto *Fn_GetCurrentMaxForetellCount = STR("/Game/Gameplay/Battle/UniqueMechanics/Foretell/BP_UniqueMechanic_Foretell_Component.BP_UniqueMechanic_Foretell_Component_C:GetCurrentMaxForetellCount");
 }
 
 class ForetellVisualBugFixMod : public RC::CppUserModBase
