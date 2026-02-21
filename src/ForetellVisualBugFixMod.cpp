@@ -18,7 +18,7 @@ ForetellVisualBugFixMod::ForetellVisualBugFixMod()
     , hooked_funcs{}
 {
     ModName = STR("ForetellVisualBugFixMod");
-    ModVersion = STR("0.1.1");
+    ModVersion = STR("0.1.2");
     ModDescription = STR("Fix for the Foretell overflow visual bug");
     ModAuthors = STR("Reagent0");
     
