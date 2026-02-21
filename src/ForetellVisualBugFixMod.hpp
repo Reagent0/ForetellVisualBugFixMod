@@ -58,7 +58,6 @@ private:
         RC::Unreal::UFunction *fn_OnBattleDependenciesFullyLoaded;
         RC::Unreal::UFunction *fn_ApplyForetell;
     } hooked_funcs;
-    bool hooked;
     void init_hooks();
 };
 

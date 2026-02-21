@@ -16,7 +16,6 @@ ForetellVisualBugFixMod::ForetellVisualBugFixMod()
     : RC::CppUserModBase()
     , initial_hook_ids(-1, -1)
     , hooked_funcs{}
-    , hooked(false)
 {
     ModName = STR("ForetellVisualBugFixMod");
     ModVersion = STR("0.1.1");
@@ -65,17 +64,13 @@ void ForetellVisualBugFixMod::init_hooks()
         {
             FVBFMOD_LOG(LogLevel::Verbose, STR("OnBattleDependenciesFullyLoaded post-hook called!"));
 
-            if (!hooked)
+            hooked_funcs.fn_ApplyForetell = UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, Paths::Fn_ApplyForetell);
+            if (hooked_funcs.fn_ApplyForetell == nullptr)
             {
-                hooked_funcs.fn_ApplyForetell = UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, Paths::Fn_ApplyForetell);
-                if (hooked_funcs.fn_ApplyForetell == nullptr)
-                {
-                    FVBFMOD_LOG(LogLevel::Error, STR("Cannot find function ApplyForetell!"));
-                    return;
-                }
-                hooked = true;
-                FVBFMOD_LOG(LogLevel::Verbose, STR("ApplyForetell function found!"));
+                FVBFMOD_LOG(LogLevel::Error, STR("Cannot find function ApplyForetell!"));
+                return;
             }
+            FVBFMOD_LOG(LogLevel::Verbose, STR("ApplyForetell function found!"));
         }
     });
 
